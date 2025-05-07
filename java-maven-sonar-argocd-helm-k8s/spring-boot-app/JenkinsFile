@@ -1,6 +1,5 @@
 pipeline {
-  agent {
-    docker {
+  agent {    docker {
         image 'maven:3.8.7-eclipse-temurin-17'
         args '-v /var/run/docker.sock:/var/run/docker.sock'
     }
@@ -15,11 +14,11 @@ pipeline {
     
     stage('Static Code Analysis') {
       environment {
-        SONAR_URL = "http://localhost:9000"
+        SONAR_URL = "http://192.168.10.135:9000"
       }
        steps {
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
-          sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=http://host.docker.internal:9000 '
+          sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
         }
       }
     }
