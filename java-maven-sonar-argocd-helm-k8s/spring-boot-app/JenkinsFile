@@ -25,13 +25,26 @@ pipeline {
 stage('Credential Scanner - TruffleHog') {
   agent {
     docker {
-      image 'trufflesecurity/trufflehog:latest'
-      args '-v $WORKSPACE:/src'
+      image 'python:3.11'  // Ensures shell and pip available
+      args '-u root'       // Ensures no permission issues
     }
   }
   steps {
-    sh 'trufflehog filesystem /src/java-maven-sonar-argocd-helm-k8s/spring-boot-app --json > /src/trufflehog-report.json || true'
-    archiveArtifacts artifacts: 'trufflehog-report.json', allowEmptyArchive: true
+    dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+      sh '''
+        pip install --no-cache-dir trufflehog
+        mkdir -p trufflehog-reports
+        trufflehog filesystem . --json > trufflehog-reports/trufflehog-report.json || true
+
+        if grep -q "reason" trufflehog-reports/trufflehog-report.json; then
+          echo "❌ Secrets detected by TruffleHog!"
+          exit 1
+        else
+          echo "✅ No secrets detected."
+        fi
+      '''
+    }
+    archiveArtifacts artifacts: '**/trufflehog-reports/trufflehog-report.json', allowEmptyArchive: true
   }
 }
 
