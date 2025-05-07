@@ -22,5 +22,22 @@ pipeline {
         }
       }
     }
+stage('Credential Scanner - TruffleHog') {
+  agent {
+    docker {
+      image 'trufflesecurity/trufflehog:latest'
+    }
+  }
+  steps {
+    dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+      sh '''
+        mkdir -p trufflehog-reports
+        trufflehog filesystem . --json > trufflehog-reports/trufflehog-report.json || true
+      '''
+    }
+    archiveArtifacts artifacts: '**/trufflehog-reports/trufflehog-report.json', allowEmptyArchive: true
+  }
+}
+
   } // closes 'stages'
 }   // closes 'pipeline'
