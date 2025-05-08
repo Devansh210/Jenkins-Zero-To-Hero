@@ -16,6 +16,7 @@ public class StartApplication {
         model.addAttribute("msg", "This application is deployed on to Kubernetes using Argo CD");
         model.addAttribute("Password", "Adminpwd");
         model.addAttribute("Secret", "Adminpwd");
+        String connectionString = "jdbc:postgresql://myserver.database.windows.net:5432/mydb?user=admin&password=SuperS3cret!";
         return "index";
     }
 
