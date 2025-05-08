@@ -5,6 +5,7 @@ pipeline {
       args '-v /var/run/docker.sock:/var/run/docker.sock --group-add=$(stat -c %g /var/run/docker.sock)'
     }
   }
+  stages {
     stage('Setup Docker') {
       steps {
         // Install Docker CLI in the container
@@ -22,7 +23,7 @@ pipeline {
         sh 'docker ps'
       }
     }
-  stages {
+ 
     stage('Checkout') {
       steps {
       dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app'){
@@ -45,7 +46,7 @@ pipeline {
         }
       }
     }
-stage('Credential Scanner - TruffleHog') {
+    stage('Credential Scanner - TruffleHog') {
       steps {
         // Create a directory for scan results
         sh 'mkdir -p trufflehog-reports'
