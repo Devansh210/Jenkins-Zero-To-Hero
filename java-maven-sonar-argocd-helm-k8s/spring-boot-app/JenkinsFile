@@ -7,9 +7,10 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
+      dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app'){
         sh 'echo passed'
         // git branch: 'main', url: 'https://github.com/Devansh210/Jenkins-Zero-To-Hero.git'
-      }
+      }}
     }
     
     stage('Static Code Analysis') {
