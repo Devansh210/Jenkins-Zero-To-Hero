@@ -9,6 +9,7 @@ pipeline {
       steps {
       dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app'){
         sh 'echo passed'
+        sh 'pwd'
         // git branch: 'main', url: 'https://github.com/Devansh210/Jenkins-Zero-To-Hero.git'
       }}
     }
@@ -27,6 +28,7 @@ pipeline {
       steps {
         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
           sh '''
+           pwd
             mkdir -p trufflehog-reports
 
             docker run --rm -v $(pwd):/src trufflesecurity/trufflehog \
