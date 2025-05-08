@@ -9,6 +9,9 @@ pipeline {
       steps {
       dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app'){
         sh 'echo passed'
+        sh 'docker --version || echo "Docker not found or not accessible"'
+        sh 'id'  // This will show the user Jenkins is running as
+        sh 'groups || echo "Unable to determine groups"'
         sh 'pwd'
         // git branch: 'main', url: 'https://github.com/Devansh210/Jenkins-Zero-To-Hero.git'
       }}
