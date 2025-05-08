@@ -1,9 +1,27 @@
 pipeline {
-  agent {    docker {
-        image 'maven:3.8.7-eclipse-temurin-17'
-        args '-v /var/run/docker.sock:/var/run/docker.sock'
+  agent {
+    docker {
+      image 'maven:3.8.7-eclipse-temurin-17'
+      args '-v /var/run/docker.sock:/var/run/docker.sock --group-add=$(stat -c %g /var/run/docker.sock)'
     }
-}
+  }
+stage('Setup Docker') {
+      steps {
+        // Install Docker CLI in the container
+        sh '''
+          apt-get update -qq
+          apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+          mkdir -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+          apt-get update -qq
+          apt-get install -y docker-ce-cli
+        '''
+        // Verify Docker is accessible
+        sh 'docker --version'
+        sh 'docker ps'
+      }
+    }
   stages {
     stage('Checkout') {
       steps {
@@ -27,25 +45,30 @@ pipeline {
         }
       }
     }
- stage('Credential Scanner - TruffleHog') {
+stage('Credential Scanner - TruffleHog') {
       steps {
-        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-          sh '''
-           pwd
-            mkdir -p trufflehog-reports
-
-            docker run --rm -v $(pwd):/src trufflesecurity/trufflehog \
-              filesystem /src --json > trufflehog-reports/trufflehog-report.json || true
-
-            if grep -q "reason" trufflehog-reports/trufflehog-report.json; then
-              echo "❌ Secrets detected by TruffleHog!"
-              exit 1
-            else
-              echo "✅ No secrets detected."
-            fi
-          '''
-        }
-        archiveArtifacts artifacts: '**/trufflehog-reports/trufflehog-report.json', allowEmptyArchive: true
+        // Create a directory for scan results
+        sh 'mkdir -p trufflehog-reports'
+        // Run TruffleHog scan
+        sh '''
+          # Run TruffleHog with Docker-in-Docker
+          docker run --rm \
+            -v $(pwd):/src \
+            trufflesecurity/trufflehog:latest \
+            filesystem \
+            --directory=/src \
+            --json \
+> trufflehog-reports/trufflehog-report.json || true
+          # Check if secrets were found
+          if grep -q "fingerprint" trufflehog-reports/trufflehog-report.json; then
+            echo "⚠️ WARNING: Potential secrets detected by TruffleHog!"
+            exit 1
+          else
+            echo "✅ No secrets detected by TruffleHog"
+          fi
+        '''
+        // Archive the reports as artifacts in Jenkins
+        archiveArtifacts artifacts: 'trufflehog-reports/*.json', allowEmptyArchive: true
       }
     }
   } // closes 'stages'
