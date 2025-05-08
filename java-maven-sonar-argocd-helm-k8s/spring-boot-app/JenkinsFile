@@ -5,7 +5,7 @@ pipeline {
       args '-v /var/run/docker.sock:/var/run/docker.sock --group-add=$(stat -c %g /var/run/docker.sock)'
     }
   }
-stage('Setup Docker') {
+    stage('Setup Docker') {
       steps {
         // Install Docker CLI in the container
         sh '''
