@@ -10,14 +10,6 @@ pipeline {
     SONAR_URL = "http://192.168.10.135:9000"
   }
 
-  stages {
-    
-    stage('Checkout') {
-      steps {
-        git branch: 'main', url: 'https://github.com/Devansh210/Jenkins-Zero-To-Hero.git'
-      }
-    }
-
     stage('Static Code Analysis - SonarQube') {
       steps {
         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
