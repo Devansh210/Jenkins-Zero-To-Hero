@@ -33,23 +33,24 @@ pipeline {
       }
     }
 
-    stage('Credential Scan - TruffleHog') {
-      steps {
-        sh '''
-          mkdir -p reports
+   stage('Credential Scan - TruffleHog') {
+  steps {
+    sh '''
+      mkdir -p reports
 
-          trufflehog filesystem . --json > reports/trufflehog-report.json || true
+      trufflehog --json --entropy=True . > reports/trufflehog-report.json || true
 
-          if grep -q '"DetectorName"' reports/trufflehog-report.json; then
-            echo "❌ Secrets detected by TruffleHog!"
-            cat reports/trufflehog-report.json
-            exit 1
-          else
-            echo "✅ No secrets detected."
-          fi
-        '''
-      }
+      if grep -q '"PrintDiff"' reports/trufflehog-report.json; then
+        echo "❌ Secrets detected by TruffleHog!"
+        cat reports/trufflehog-report.json
+        exit 1
+      else
+        echo "✅ No secrets detected."
+      fi
+    '''
     }
+   }
+
   }
 
   post {
