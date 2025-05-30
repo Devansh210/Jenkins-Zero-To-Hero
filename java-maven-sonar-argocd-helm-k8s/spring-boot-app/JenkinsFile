@@ -1,24 +1,23 @@
 pipeline {
-   agent any
-    
-    tools{
-        jdk 'jdk17'
-        maven 'maven3'
-    }
+  agent any
+
+  tools {
+    jdk 'jdk17'
+    maven 'maven3'
+  }
 
   environment {
     SONAR_URL = "http://192.168.10.135:9000"
   }
-stages {
 
-   stage('Maven Build') {
+  stages {
+    stage('Maven Build') {
       steps {
         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
           sh 'mvn clean install'
         }
       }
     }
-  
 
     stage('Static Code Analysis - SonarQube') {
       steps {
@@ -33,33 +32,43 @@ stages {
         }
       }
     }
-stage ('Check secrets') {
-    steps {
-        sh 'docker run  gesellix/trufflehog --json https://github.com/Devansh210/Jenkins-Zero-To-Hero.git > trufflehog.json'
+
+    stage('Check Secrets - TruffleHog') {
+      steps {
+        sh 'mkdir -p scanresults'
+
+        // Run TruffleHog scan and save output
+        sh 'docker run --rm gesellix/trufflehog --json https://github.com/Devansh210/Jenkins-Zero-To-Hero.git > scanresults/trufflehog.json'
 
         script {
-            def jsonReport = readFile('trufflehog.json')
-            
-            def htmlReport = """
+          def jsonReport = readFile('scanresults/trufflehog.json')
+
+          def htmlReport = """
             <html>
             <head>
-                <title>Trufflehog Scan Report</title>
+              <title>Trufflehog Scan Report</title>
             </head>
             <body>
-                <h1>Trufflehog Scan Report</h1>
-                <pre>${jsonReport}</pre>
+              <h1>Trufflehog Scan Report</h1>
+              <pre>${jsonReport}</pre>
             </body>
             </html>
-            """
-            
-            writeFile file: 'scanresults/trufflehog-report.html', text: htmlReport
-        }
-        
-        archiveArtifacts artifacts: 'scanresults/trufflehog-report.html', allowEmptyArchive: true
-    }
- }
-}   
+          """
 
+          writeFile file: 'scanresults/trufflehog-report.html', text: htmlReport
+
+          // Optional: log if secrets were found
+          if (jsonReport.contains('"PrintDiff"')) {
+            echo '❗ Secrets detected in repository!'
+          } else {
+            echo '✅ No secrets detected.'
+          }
+        }
+
+        archiveArtifacts artifacts: 'scanresults/trufflehog-report.html', allowEmptyArchive: true
+      }
+    }
+  }
 
   post {
     always {
