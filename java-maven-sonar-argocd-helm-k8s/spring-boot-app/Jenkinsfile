@@ -8,11 +8,6 @@ pipeline {
 
   stages {
 
-    stage('Checkout') {
-      steps {
-        git branch: 'main', url: 'https://github.com/Devansh210/Jenkins-Zero-To-Hero.git'
-      }
-    }
 
     stage('Maven Build') {
       steps {
@@ -40,20 +35,19 @@ pipeline {
 
     stage('Credential Scan - TruffleHog') {
       steps {
-        dir("$APP_DIR") {
-          sh '''
-            mkdir -p ../../reports
+        sh '''
+          mkdir -p reports
 
-            /usr/local/bin/trufflehog filesystem . --json > ../../reports/trufflehog-report.json || true
+          trufflehog filesystem . --json > reports/trufflehog-report.json || true
 
-            if grep -q "reason" ../../reports/trufflehog-report.json; then
-              echo "❌ Secrets detected by TruffleHog!"
-              exit 1
-            else
-              echo "✅ No secrets detected."
-            fi
-          '''
-        }
+          if grep -q '"DetectorName"' reports/trufflehog-report.json; then
+            echo "❌ Secrets detected by TruffleHog!"
+            cat reports/trufflehog-report.json
+            exit 1
+          else
+            echo "✅ No secrets detected."
+          fi
+        '''
       }
     }
   }
