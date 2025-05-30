@@ -38,22 +38,25 @@ pipeline {
       }
     }
 
-   stage('Credential Scan - TruffleHog') {
-  steps {
-    sh '''
-      mkdir -p reports
+    stage('Credential Scan - TruffleHog') {
+      steps {
+        dir("$APP_DIR") {
+          sh '''
+            mkdir -p ../../reports
 
-      /usr/local/bin/trufflehog filesystem . --json > reports/trufflehog-report.json || true
+            /usr/local/bin/trufflehog filesystem . --json > ../../reports/trufflehog-report.json || true
 
-      if grep -q "reason" reports/trufflehog-report.json; then
-        echo "❌ Secrets detected by TruffleHog!"
-        exit 1
-      else
-        echo "✅ No secrets detected."
-      fi
-    '''
+            if grep -q "reason" ../../reports/trufflehog-report.json; then
+              echo "❌ Secrets detected by TruffleHog!"
+              exit 1
+            else
+              echo "✅ No secrets detected."
+            fi
+          '''
+        }
+      }
+    }
   }
-}
 
   post {
     success {
