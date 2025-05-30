@@ -1,15 +1,25 @@
 pipeline {
-  agent {
-    docker {
-      image 'maven:3.8.7-eclipse-temurin-17'
-      args '-v /var/run/docker.sock:/var/run/docker.sock'
+   agent any
+    
+    tools{
+        jdk 'jdk17'
+        maven 'maven3'
     }
-  }
 
   environment {
     SONAR_URL = "http://192.168.10.135:9000"
   }
 stages {
+
+   stage('Maven Build') {
+      steps {
+        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+          sh 'mvn clean install'
+        }
+      }
+    }
+  }
+
     stage('Static Code Analysis - SonarQube') {
       steps {
         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
@@ -23,36 +33,33 @@ stages {
         }
       }
     }
+stage ('Check secrets') {
+    steps {
+        sh 'docker run  gesellix/trufflehog --json https://github.com/Devansh210/Jenkins-Zero-To-Hero.git > trufflehog.json'
 
-    stage('Credential Scanner - TruffleHog') {
-      steps {
-        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-          sh '''
-            mkdir -p trufflehog-reports
-
-            docker run --rm -v $(pwd):/src trufflesecurity/trufflehog \
-              filesystem /src --json > trufflehog-reports/trufflehog-report.json || true
-
-            if grep -q "reason" trufflehog-reports/trufflehog-report.json; then
-              echo "❌ Secrets detected by TruffleHog!"
-              exit 1
-            else
-              echo "✅ No secrets detected."
-            fi
-          '''
+        script {
+            def jsonReport = readFile('trufflehog.json')
+            
+            def htmlReport = """
+            <html>
+            <head>
+                <title>Trufflehog Scan Report</title>
+            </head>
+            <body>
+                <h1>Trufflehog Scan Report</h1>
+                <pre>${jsonReport}</pre>
+            </body>
+            </html>
+            """
+            
+            writeFile file: 'scanresults/trufflehog-report.html', text: htmlReport
         }
-        archiveArtifacts artifacts: '**/trufflehog-reports/trufflehog-report.json', allowEmptyArchive: true
-      }
+        
+        archiveArtifacts artifacts: 'scanresults/trufflehog-report.html', allowEmptyArchive: true
     }
+}
+   
 
-    stage('Maven Build') {
-      steps {
-        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-          sh 'mvn clean install'
-        }
-      }
-    }
-  }
 
   post {
     always {
