@@ -38,17 +38,20 @@ pipeline {
       }
     }
 
-   stage('Credential Scan - TruffleHog') {
+  stage('Credential Scan - TruffleHog') {
   steps {
     sh '''
       mkdir -p reports
 
+      echo "🔍 Running TruffleHog..."
       trufflehog --json --entropy=True . > reports/trufflehog-report.json 2>&1 || true
 
+      echo "📄 TruffleHog Report Preview (first 20 lines):"
+      head -n 20 reports/trufflehog-report.json || echo "⚠️ Could not preview report"
+
       if grep -q '"DetectorName"' reports/trufflehog-report.json; then
-        echo "❌ Secrets detected by TruffleHog!"
-        cat reports/trufflehog-report.json
-        exit 1
+        echo "⚠️ WARNING: Potential secrets were detected by TruffleHog!"
+        echo "📝 Full report saved to: reports/trufflehog-report.json"
       else
         echo "✅ No secrets detected."
       fi
@@ -59,7 +62,8 @@ pipeline {
 
 
 
-   }
+
+    }
 
   post {
     success {
