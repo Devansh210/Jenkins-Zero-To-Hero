@@ -1,10 +1,5 @@
 pipeline {
-  agent {
-    docker {
-      image 'maven:3.8.7-eclipse-temurin-17'
-      args '-v /var/run/docker.sock:/var/run/docker.sock'
-    }
-  }
+  agent any
 
   environment {
     SONAR_URL = "http://192.168.10.135:9000"
@@ -47,8 +42,7 @@ pipeline {
       steps {
         sh '''
           mkdir -p reports
-          docker run --rm -v $(pwd):/src trufflesecurity/trufflehog \
-            filesystem /src --json > reports/trufflehog-report.json || true
+          trufflehog filesystem . --json > reports/trufflehog-report.json || true
 
           if grep -q "reason" reports/trufflehog-report.json; then
             echo "❌ Secrets detected by TruffleHog!"
@@ -59,3 +53,19 @@ pipeline {
         '''
       }
     }
+  }
+
+  post {
+    success {
+      echo "✅ Pipeline completed successfully."
+    }
+    failure {
+      echo "❌ Pipeline failed. Please check logs."
+    }
+    always {
+      archiveArtifacts artifacts: '**/target/*.jar', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'reports/trufflehog-report.json', allowEmptyArchive: true
+    }
+  }
+}
+
